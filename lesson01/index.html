@@ -1,0 +1,236 @@
+<html>
+
+<head>
+<title>Aprende webGL &mdash; Leccion 1</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<script type="text/javascript" src="js/glMatrix-0.9.5.min.js"></script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    void main(void) {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    }
+</script>
+
+
+<script type="text/javascript">
+
+    var gl;
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("No puede iniciarse webGL en este navegador");
+        }
+    }
+
+
+    function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
+
+
+    var shaderProgram;
+
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-vs");
+
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("No pueden iniciarse los shaders");
+        }
+
+        gl.useProgram(shaderProgram);
+
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    }
+
+
+    var mvMatrix = mat4.create();
+    var pMatrix = mat4.create();
+
+    function setMatrixUniforms() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+
+
+
+    //Declaramos dos variables globales donde mantener los buffers
+    //En una página del mundo real nunca se utilizará una variable para cada objeto de la escena
+    var triangleVertexPositionBuffer;
+    var squareVertexPositionBuffer;
+
+    //En este metodo metemos los vertices de los objetos en la tarjeta grafica
+    function initBuffers() {
+
+        //Este buffer se guardara en la memoria de la tarjeta gráfica
+        //cuando queramos dibujar la escena, solo necesitamos decir a webGL “oye, dibuja todo lo que te tienes en la memoria”
+        triangleVertexPositionBuffer = gl.createBuffer();
+        /*Esta línea le dice a webGL que cualquier operación posterior que actue sobre buffers deberá de aplicarse sobre el buffer
+        que le acabamos de indicar. Este concepto de tener un apuntador implícito al “buffer actual” sobre el que ejecutar los métodos
+        en vez de decirle a la función directamente en los parámetros el buffer con el que debe trabajar, es un poco extraño,
+        pero estoy seguro de que se hace así porque se obtiene un mejor rendimiento.*/
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        var vertices = [
+             0.0,  1.0,  0.0,
+            -1.0, -1.0,  0.0,
+             1.0, -1.0,  0.0
+        ];
+        //le decimos a webGL que use la lista de vertices para rellenar el buffer actual que es el de "triangleVertexPostionBuffer"
+        //ya que gracias al método bindBuffer estamos apuntando a esa dirección del buffer
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        /*los 9 elementos (números) del buffer actualmente representan tres vértices (numItems),
+         y cada vértice está formado por 3 números (itemSize). Los tres numeros son x,y,z
+        //estos atributos de itemSize y numItems no existen previamente, los hemos creado definiendolos de esta forma*/
+        triangleVertexPositionBuffer.itemSize = 3;
+        triangleVertexPositionBuffer.numItems = 3;
+
+        squareVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+        vertices = [
+             1.0,  1.0,  0.0,
+            -1.0,  1.0,  0.0,
+             1.0, -1.0,  0.0,
+            -1.0, -1.0,  0.0
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        squareVertexPositionBuffer.itemSize = 3;
+        squareVertexPositionBuffer.numItems = 4;
+    }
+
+
+    // Utilizamos los buffers que previamente hemos añadido a nuestra tarjeta grafica para pintar los vertices en la pantalla
+    function drawScene() {
+        //Le decimos a webGL en qué parte del canvas puede pintar, desde el punto (x=0,y=0) hasta el ancho y el alto que hemos dicho
+        /* function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+            ahi definimos los atributos de viewportWidth/height de nuestro gl*/
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+        //limpiamos el trozo de canvas que acabamos de definir, y lo preparamos para dibujar en él
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        /*Por defecto, webGL dibuja las cosas que están cerca del mismo tamaño que las que están lejos (proyeccion ortografica,
+        basada en la proyeccion ortogonal). Con el fin de hacer que las cosas que estén más lejos se vean más pequeñas
+        que las que tenemos cerca, tenemos que aprender un poco sobre perspectivas.
+        PARA ESTA ESCENA: estamos diciendo que tenemos un campo de visión (vertical) con un ángulo de 45º, la relación que hay
+        entre la anchura y la altura del lienzo, que no queremos ver las cosas que hay a menos de 0,1 unidades del punto de vista,
+        ni tampoco las que estén a más de 100.*/
+        //pMatrix = mat4.create(); que lo hemos definido en el metodo initShaders
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+        mat4.identity(mvMatrix);
+
+        mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        //Ésto le dice a webGL que almacene en la memoria de la tarjeta gráfica nuestra matriz modelo-vista actual
+        // (y también de la matriz de proyección, de la que hablaremos más adelante)
+        setMatrixUniforms();
+        gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
+
+
+        mat4.translate(mvMatrix, [3.0, 0.0, 0.0]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        setMatrixUniforms();
+        /*TRIANGLE_STRIP es una forma de dibujar polígonos que consiste en pintar triángulos sucesivos.
+        Funciona así: Si tenemos 4 vértices, A,B, C y D, el primer triángulo que pintará es el que forman los puntos A, B y C.
+        El segundo, los que forman B, C y D. Y así sucesivamente, si hubiera más puntos.*/
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems);
+    }
+
+
+
+    function webGLStart() {
+        var canvas = document.getElementById("leccion1-canvas");
+        initGL(canvas);
+        initShaders();
+        initBuffers();
+
+        //limpia el canvas con el negro
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        //Cada vez que se pinte la escena se haga comprobaciones de seguridad
+        gl.enable(gl.DEPTH_TEST);
+
+        //dibuja el triangulo y el cuadrado en el canvas usando los buffers
+        drawScene();
+    }
+
+
+</script>
+
+
+</head>
+
+
+<body onload="webGLStart();">
+
+    <canvas id="leccion1-canvas" style="border: none;" width="500" height="500"></canvas>
+
+</body>
+
+</html>
