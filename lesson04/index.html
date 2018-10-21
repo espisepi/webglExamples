@@ -14,23 +14,36 @@
 
     varying vec4 vColor;
 
+    varying vec2 vTextureCoord;
+
+    uniform sampler2D uSampler;
+
+    //varying float isCube;
+
     void main(void) {
-        gl_FragColor = vColor;
+            gl_FragColor = vColor;
+            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
     }
 </script>
 
 <script id="shader-vs" type="x-shader/x-vertex">
     attribute vec3 aVertexPosition;
     attribute vec4 aVertexColor;
+    attribute vec2 aTextureCoord;
+    attribute float isCube;
 
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
 
     varying vec4 vColor;
+    varying vec2 vTextureCoord;
+    //varying float isCubeToFrag;
 
     void main(void) {
         gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
         vColor = aVertexColor;
+        vTextureCoord = aTextureCoord;
+        //isCubeToFrag = isCube;
     }
 </script>
 
@@ -111,8 +124,13 @@
         shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
         gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
 
+        shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+        gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
         shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
         shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+        shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+        shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "isCube");
     }
 
 
@@ -252,7 +270,53 @@
         myObjectVertexIndexBuffer.numItems = 36;
         buffersPositionColorEdges[2]=myObjectVertexIndexBuffer;
 
-        return buffersPositionColorEdges;
+        //Texture
+        var cubeVertexTextureCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
+        var textureCoords = [
+            // Front face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+ 
+            // Back face
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+ 
+            // Top face
+             0.0, 1.0,
+             0.0, 0.0,
+             1.0, 0.0,
+             1.0, 1.0,
+        
+            // Bottom face
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+        
+            // Right face
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+        
+            // Left face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+    cubeVertexTextureCoordBuffer.itemSize = 2;
+    cubeVertexTextureCoordBuffer.numItems = 24;
+    buffersPositionColorEdges[3]=cubeVertexTextureCoordBuffer;
+
+
+    return buffersPositionColorEdges;
     }
 
 
@@ -265,6 +329,7 @@
     var myCubeVertexPositionBuffer;
     var myCubeVertexColorBuffer;
     var myCubeVertexIndexBuffer;
+    var myCubeVertexTextureCoordBuffer;
 
     function initBuffers() {
 
@@ -274,6 +339,7 @@
         myCubeVertexPositionBuffer = buffersPositionColorEdges[0];
         myCubeVertexColorBuffer = buffersPositionColorEdges[1];
         myCubeVertexIndexBuffer = buffersPositionColorEdges[2];
+        myCubeVertexTextureCoordBuffer = buffersPositionColorEdges[3]
 
         pyramidVertexPositionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexPositionBuffer);
@@ -466,6 +532,13 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, myCubeVertexColorBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, myCubeVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+        //Texture
+        gl.bindBuffer(gl.ARRAY_BUFFER, myCubeVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, myCubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, neheTexture);
+        gl.uniform1i(shaderProgram.samplerUniform, 0);
+
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, myCubeVertexIndexBuffer);
         setMatrixUniforms();
         gl.drawElements(gl.TRIANGLES, myCubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
@@ -496,11 +569,32 @@
     }
 
 
+    var neheTexture;
+    function initTexture() {
+        neheTexture = gl.createTexture();
+        neheTexture.image = new Image();
+        neheTexture.image.onload = function() {
+        handleLoadedTexture(neheTexture)
+        }
+    neheTexture.image.src = "img/nehe.gif";
+    }
+
+    function handleLoadedTexture(texture) {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+
     function webGLStart() {
         var canvas = document.getElementById("lesson04-canvas");
         initGL(canvas);
         initShaders()
         initBuffers();
+        initTexture();
 
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
