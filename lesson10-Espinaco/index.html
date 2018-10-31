@@ -245,7 +245,7 @@
             vertexIndexBuffer : null
         }
     
-        function handleLoadedTeapot(teapotData) {
+        function handleLoadedJson(teapotData) {
             teapotBuffers.vertexNormalBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, teapotBuffers.vertexNormalBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexNormals), gl.STATIC_DRAW);
@@ -274,12 +274,12 @@
         }
     
     
-        function loadBufferTeapot() {
+        function loadBufferJson(nameFile) {
             var request = new XMLHttpRequest();
-            request.open("GET", "data/Teapot.json");
+            request.open("GET", "data/"+nameFile);
             request.onreadystatechange = function () {
                 if (request.readyState == 4) {
-                    handleLoadedTeapot(JSON.parse(request.responseText));
+                    handleLoadedJson(JSON.parse(request.responseText));
                 }
             }
             request.send();
@@ -374,7 +374,7 @@
         }
 
         function initBuffers(){
-            loadBufferTeapot();
+            loadBufferJson("Teapot.json");
         }
     
     
