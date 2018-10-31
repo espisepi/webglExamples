@@ -7,7 +7,6 @@
     
     <script type="text/javascript" src="js/glMatrix-0.9.5.min.js"></script>
     <script type="text/javascript" src="js/webgl-utils.js"></script>
-    <script type="text/javascript" src="js/cube.js"></script>
     
     <script id="shader-fs" type="x-shader/x-fragment">
         #ifdef GL_ES
@@ -239,7 +238,6 @@
     
         }
     
-    
         var teapotVertexPositionBuffer;
         var teapotVertexNormalBuffer;
         var teapotVertexTextureCoordBuffer;
@@ -274,7 +272,7 @@
         }
     
     
-        function loadTeapot() {
+        function loadBufferTeapot() {
             var request = new XMLHttpRequest();
             request.open("GET", "data/Teapot.json");
             request.onreadystatechange = function () {
@@ -285,18 +283,17 @@
             request.send();
         }
 
-       var giroTeapot = 1;
-
         function drawTeapot(){
+
+            mvPushMatrix();
 
             /*Situo la teapot mas alejada de la camara cuando empiezo la partida, mientras me muevo para alante
             aumento z, por lo tanto como la teapot esta fija a -50, conforme mi z al moverme se hace mas negativa se va acercando
             a -50 y por ende se va acercando a la teapot*/
-            mat4.translate(mvMatrix, [0, 0, -50]);
+            mat4.translate(mvMatrix, [-20, 0, -50]);
             
             /*la teapot girara sobre si misma, tengo que declarar fuera de la funcion: var giroTeapot = 1;*/
-            mat4.rotate(mvMatrix,degToRad(giroTeapot),[0,1,0]);
-            giroTeapot++;
+            //mat4.rotate(mvMatrix,degToRad(giroTeapot),[0,1,0]);
 
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, mudTexture);
@@ -311,6 +308,8 @@
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, teapotVertexIndexBuffer);
             setMatrixUniforms();
             gl.drawElements(gl.TRIANGLES, teapotVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+
+            mvPopMatrix();
         }
     
     
@@ -324,22 +323,16 @@
     
             mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
 
-            mat4.identity(mvMatrix);
-
-            //Pintar la teapot aka tetera
-            
-            mvPushMatrix();
-
+            //Configurar la camara
             //WEBGL Tomara la siguiente posicion como si fuese (0,0,0)
+            mat4.identity(mvMatrix);
             mat4.rotate(mvMatrix, degToRad(-pitch), [1, 0, 0]);
             mat4.rotate(mvMatrix, degToRad(-yaw), [0, 1, 0]);
             mat4.translate(mvMatrix, [-xPos, -yPos, -zPos]);
 
-            //console.log("xPos = "+xPos+" yPos = "+yPos+" zPos = "+zPos);
-            
+            //Dibujar los objetos
             drawTeapot();
 
-            mvPopMatrix();
 
         }
 
@@ -377,6 +370,10 @@
             drawScene();
             animate();
         }
+
+        function initBuffers(){
+            loadBufferTeapot();
+        }
     
     
     
@@ -385,7 +382,7 @@
             initGL(canvas);
             initShaders();
             initTexture();
-            loadTeapot();
+            initBuffers();
     
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.enable(gl.DEPTH_TEST);
