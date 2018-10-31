@@ -285,9 +285,19 @@
             request.send();
         }
 
-       
+       var giroTeapot = 1;
 
         function drawTeapot(){
+
+            /*Situo la teapot mas alejada de la camara cuando empiezo la partida, mientras me muevo para alante
+            aumento z, por lo tanto como la teapot esta fija a -50, conforme mi z al moverme se hace mas negativa se va acercando
+            a -50 y por ende se va acercando a la teapot*/
+            mat4.translate(mvMatrix, [0, 0, -50]);
+            
+            /*la teapot girara sobre si misma, tengo que declarar fuera de la funcion: var giroTeapot = 1;*/
+            mat4.rotate(mvMatrix,degToRad(giroTeapot),[0,1,0]);
+            giroTeapot++;
+
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, mudTexture);
             gl.uniform1i(shaderProgram.samplerUniform, 0);
