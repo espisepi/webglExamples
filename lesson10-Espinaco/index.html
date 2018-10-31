@@ -246,31 +246,38 @@
         }
     
         function handleLoadedJson(teapotData) {
-            teapotBuffers.vertexNormalBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, teapotBuffers.vertexNormalBuffer);
+            var vertexNormalBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexNormals), gl.STATIC_DRAW);
-            teapotBuffers.vertexNormalBuffer.itemSize = 3;
-            teapotBuffers.vertexNormalBuffer.numItems = teapotData.vertexNormals.length / 3;
+            vertexNormalBuffer.itemSize = 3;
+            vertexNormalBuffer.numItems = teapotData.vertexNormals.length / 3;
         
-            teapotBuffers.vertexTextureCoordBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, teapotBuffers.vertexTextureCoordBuffer);
+            var vertexTextureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexTextureCoords), gl.STATIC_DRAW);
-            teapotBuffers.vertexTextureCoordBuffer.itemSize = 2;
-            teapotBuffers.vertexTextureCoordBuffer.numItems = teapotData.vertexTextureCoords.length / 2;
+            vertexTextureCoordBuffer.itemSize = 2;
+            vertexTextureCoordBuffer.numItems = teapotData.vertexTextureCoords.length / 2;
         
-            teapotBuffers.vertexPositionBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, teapotBuffers.vertexPositionBuffer);
+            var vertexPositionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexPositions), gl.STATIC_DRAW);
-            teapotBuffers.vertexPositionBuffer.itemSize = 3;
-            teapotBuffers.vertexPositionBuffer.numItems = teapotData.vertexPositions.length / 3;
+            vertexPositionBuffer.itemSize = 3;
+            vertexPositionBuffer.numItems = teapotData.vertexPositions.length / 3;
         
-            teapotBuffers.vertexIndexBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, teapotBuffers.vertexIndexBuffer);
+            var vertexIndexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(teapotData.indices), gl.STATIC_DRAW);
-            teapotBuffers.vertexIndexBuffer.itemSize = 1;
-            teapotBuffers.vertexIndexBuffer.numItems = teapotData.indices.length;
+            vertexIndexBuffer.itemSize = 1;
+            vertexIndexBuffer.numItems = teapotData.indices.length;
  
             document.getElementById("loadingtext").style.display= "none";
+
+            return {
+                vertexNormalBuffer : vertexNormalBuffer,
+                vertexTextureCoordBuffer : vertexTextureCoordBuffer,
+                vertexPositionBuffer : vertexPositionBuffer,
+                vertexIndexBuffer : vertexIndexBuffer
+            }
         }
     
     
@@ -279,7 +286,13 @@
             request.open("GET", "data/"+nameFile);
             request.onreadystatechange = function () {
                 if (request.readyState == 4) {
-                    handleLoadedJson(JSON.parse(request.responseText));
+                    var objectBuffers = handleLoadedJson(JSON.parse(request.responseText));
+                    if(nameFile=="Teapot.json"){
+                        teapotBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
+                        teapotBuffers.vertexTextureCoordBuffer = objectBuffers.vertexTextureCoordBuffer;
+                        teapotBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
+                        teapotBuffers.vertexIndexBuffer = objectBuffers.vertexIndexBuffer;
+                    }
                 }
             }
             request.send();
