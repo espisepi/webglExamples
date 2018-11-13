@@ -131,16 +131,22 @@
         }
     
     
-        var mudTexture;
+        var allTextures = Array();
     
-        function initTexture() {
-            mudTexture = gl.createTexture();
-            mudTexture.image = new Image();
-            mudTexture.image.onload = function () {
-                handleLoadedTexture(mudTexture)
+        function initTextures() {
+            initTexture("img/arroway.de_metal+structure+06_d100_flat.jpg");
+            initTexture("img/cubeImg.gif");
+            
+        }
+
+        function initTexture(src) {
+            var texture = gl.createTexture();
+            texture.image = new Image();
+            texture.image.onload = function () {
+                handleLoadedTexture(texture);
             }
-    
-            mudTexture.image.src = "img/arroway.de_metal+structure+06_d100_flat.jpg";
+            texture.image.src = src;
+            allTextures.push(texture);
         }
     
     
@@ -337,7 +343,7 @@
             //mat4.rotate(mvMatrix,degToRad(giroTeapot),[0,1,0]);
 
             gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, mudTexture);
+            gl.bindTexture(gl.TEXTURE_2D, allTextures[0]);
             gl.uniform1i(shaderProgram.samplerUniform, 0);
     
             gl.bindBuffer(gl.ARRAY_BUFFER, teapotBuffers.vertexTextureCoordBuffer);
@@ -360,9 +366,9 @@
             mat4.translate(mvMatrix, [-50, 0, -50]);
             mat4.scale(mvMatrix, [10, 10, 10]);
 
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, mudTexture);
-            gl.uniform1i(shaderProgram.samplerUniform, 0);
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, allTextures[1]);
+            gl.uniform1i(shaderProgram.samplerUniform, 1);
     
             gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.vertexTextureCoordBuffer);
             gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeBuffers.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -448,7 +454,7 @@
             var canvas = document.getElementById("lesson10-canvas");
             initGL(canvas);
             initShaders();
-            initTexture();
+            initTextures();
             initBuffers();
     
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
