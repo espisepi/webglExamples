@@ -238,7 +238,14 @@
     
         }
 
+        //Creamos los objetos bufferes
         var teapotBuffers = {
+            vertexPositionBuffer : null,
+            vertexNormalBuffer : null,
+            vertexTextureCoordBuffer : null,
+            vertexIndexBuffer : null
+        }
+        var cubeBuffers = {
             vertexPositionBuffer : null,
             vertexNormalBuffer : null,
             vertexTextureCoordBuffer : null,
@@ -306,6 +313,11 @@
                         teapotBuffers.vertexTextureCoordBuffer = objectBuffers.vertexTextureCoordBuffer;
                         teapotBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
                         teapotBuffers.vertexIndexBuffer = objectBuffers.vertexIndexBuffer;
+                    }else if(nameFile=="cube.json"){
+                        cubeBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
+                        cubeBuffers.vertexTextureCoordBuffer = objectBuffers.vertexTextureCoordBuffer;
+                        cubeBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
+                        cubeBuffers.vertexIndexBuffer = objectBuffers.vertexIndexBuffer;
                     }
                 }
             }
@@ -340,6 +352,22 @@
 
             mvPopMatrix();
         }
+
+        function drawCube(){
+
+            mvPushMatrix();
+
+            mat4.translate(mvMatrix, [-30, 0, -50]);
+    
+            gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.vertexPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeBuffers.vertexIndexBuffer);
+            setMatrixUniforms();
+            gl.drawElements(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+
+            mvPopMatrix();
+        }
     
     
         function drawScene() {
@@ -361,6 +389,7 @@
 
             //Dibujar los objetos
             drawTeapot();
+            drawCube();
 
 
         }
@@ -402,6 +431,7 @@
 
         function initBuffers(){
             loadBufferJson("Teapot.json");
+            loadBufferJson("cube.json");
         }
     
     
