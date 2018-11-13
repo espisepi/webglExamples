@@ -357,7 +357,15 @@
 
             mvPushMatrix();
 
-            mat4.translate(mvMatrix, [-30, 0, -50]);
+            mat4.translate(mvMatrix, [-50, 0, -50]);
+            mat4.scale(mvMatrix, [10, 10, 10]);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, mudTexture);
+            gl.uniform1i(shaderProgram.samplerUniform, 0);
+    
+            gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.vertexTextureCoordBuffer);
+            gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeBuffers.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
     
             gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.vertexPositionBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
