@@ -14,26 +14,41 @@
         #endif
     
         varying vec2 vTextureCoord;
+        varying vec3 vLightWeighting;
     
         uniform sampler2D uSampler;
     
         void main(void) {
-            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+            vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+            gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
         }
     </script>
     
     <script id="shader-vs" type="x-shader/x-vertex">
         attribute vec3 aVertexPosition;
         attribute vec2 aTextureCoord;
+        attribute vec3 aVertexNormal;
     
         uniform mat4 uMVMatrix;
         uniform mat4 uPMatrix;
+        uniform mat3 uNMatrix;
+
+        uniform vec3 uAmbientColor;
+        uniform vec3 uLightingDirection;
+        uniform vec3 uDirectionalColor;
     
         varying vec2 vTextureCoord;
+        varying vec3 vLightWeighting;
     
         void main(void) {
             gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
             vTextureCoord = aTextureCoord;
+
+            vec3 transformedNormal = uNMatrix * aVertexNormal;
+            float directionalLightWeighting = max(dot(transformedNormal,uLightingDirection),0.0);
+            vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
+
+            
         }
     </script>
     
@@ -113,10 +128,18 @@
     
             shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
             gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
+            shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+            gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
     
             shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
             shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
             shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+            shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
+
+            shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
+            shaderProgram.lightingDirectionUniform = gl.getUniformLocation(shaderProgram, "uLightingDirection");
+            shaderProgram.directionalColorUniform = gl.getUniformLocation(shaderProgram, "uDirectionalColor");
         }
     
     
@@ -171,6 +194,15 @@
         function setMatrixUniforms() {
             gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
             gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+
+            /*Creamos a matriz de modelo-vista para los vectores normales, dicha matriz
+            tiene que ser 3x3, por ello hacemos los siguientes cambios*/
+            var normalMatrix = mat3.create();
+            mat4.toInverseMat3(mvMatrix, normalMatrix);
+            mat3.transpose(normalMatrix);
+            gl.uniformMatrix3fv(shaderProgram.nMatrixUniform,false,normalMatrix);
+
+
         }
     
     
@@ -315,12 +347,12 @@
                 if (request.readyState == 4) {
                     var objectBuffers = handleLoadedJson(JSON.parse(request.responseText));
                     if(nameFile=="Teapot.json"){
-                        teapotBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
+                        teapotBuffers.vertexNormalBuffer = objectBuffers.vertexNormalBuffer;
                         teapotBuffers.vertexTextureCoordBuffer = objectBuffers.vertexTextureCoordBuffer;
                         teapotBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
                         teapotBuffers.vertexIndexBuffer = objectBuffers.vertexIndexBuffer;
                     }else if(nameFile=="cube.json"){
-                        cubeBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
+                        cubeBuffers.vertexNormalBuffer = objectBuffers.vertexNormalBuffer;
                         cubeBuffers.vertexTextureCoordBuffer = objectBuffers.vertexTextureCoordBuffer;
                         cubeBuffers.vertexPositionBuffer = objectBuffers.vertexPositionBuffer;
                         cubeBuffers.vertexIndexBuffer = objectBuffers.vertexIndexBuffer;
@@ -351,6 +383,9 @@
     
             gl.bindBuffer(gl.ARRAY_BUFFER, teapotBuffers.vertexPositionBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, teapotBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER,teapotBuffers.vertexNormalBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, teapotBuffers.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
     
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, teapotBuffers.vertexIndexBuffer);
             setMatrixUniforms();
@@ -376,6 +411,18 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.vertexPositionBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
     
+
+            //PARA LA LUZ
+            gl.bindBuffer(gl.ARRAY_BUFFER,cubeBuffers.vertexNormalBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, cubeBuffers.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.uniform3f(shaderProgram.ambientColorUniform,1.0,0.5,0.5);
+            var adjustedLD = vec3.create();
+            vec3.normalize([1.0,0.5,0.5],adjustedLD);
+            vec3.scale(adjustedLD, -1);
+            gl.uniform3fv(shaderProgram.lightingDirectionUniform,adjustedLD);
+            gl.uniform3f(shaderProgram.directionalColorUniform,1.0,1.0,0.5);
+            //FIN PARA LA LUZ
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeBuffers.vertexIndexBuffer);
             setMatrixUniforms();
             gl.drawElements(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
